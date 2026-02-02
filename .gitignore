@@ -1,0 +1,10 @@
+# Credentials - don't commit secrets
+credentials/
+
+# OS files
+.DS_Store
+
+# Editor
+*.swp
+*.swo
+*~
