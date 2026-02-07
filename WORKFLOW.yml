@@ -1,0 +1,49 @@
+# GitHub Actions Workflow for Buffer Sync
+# 
+# SETUP: Copy this file to .github/workflows/sync.yml
+# (Can't be pushed via API - must be done manually in GitHub UI or local git with workflow scope)
+
+name: Sync to Buffer
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download previous hashes
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          name: sent-hashes
+          path: scripts/
+          search_artifacts: true
+          if_no_artifact_found: ignore
+
+      - name: Run sync script
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
+        run: npm run sync
+
+      - name: Upload updated hashes
+        uses: actions/upload-artifact@v4
+        with:
+          name: sent-hashes
+          path: scripts/sent-hashes.json
+          retention-days: 90
+          overwrite: true

@@ -1,49 +1,62 @@
-# NextGP Social Media System
+# NextGP Social
 
-Automated content generation and scheduling for NextGP F1 app.
+Automated social media pipeline for the NextGP F1 app.
 
-## Connected Channels (Buffer)
-- [x] X/Twitter: @NextGP_app
-- [x] Mastodon: @nextGP@mastodon.xyz
-- [ ] Threads: @nextgp_app (pending)
-- [ ] Instagram: @nextgp_app (pending)
+## How It Works
 
-## Buffer Credentials
-- Email: chrisfree@icloud.com
-- Password: (in 1Password or ask Chris)
+```
+Google Sheet (source of truth)
+        ↓
+   Status = "Ready"
+        ↓
+GitHub Actions (every 15 min)
+        ↓
+   Typefully (schedule)
+        ↓
+   X / Mastodon / LinkedIn / Threads
+```
 
-## Workflow
-1. Kay monitors F1 news sources
-2. Kay drafts content batches
-3. Kay pushes drafts to Buffer
-4. Chris reviews/approves in Buffer app
-5. Buffer publishes on schedule
+## Quick Start
 
-## Content Pillars
-| Pillar | % | Examples |
-|--------|---|----------|
-| Race Weekend | 35% | Quali reactions, predictions, analysis |
-| Breaking News | 25% | Driver news, regulations, team drama |
-| App Value | 20% | NextGP features, widgets, tips |
-| F1 Culture | 15% | Memes, hot takes, history |
-| Engagement | 5% | Polls, questions |
+### Adding Content
+1. Open the [Google Sheet](https://docs.google.com/spreadsheets/d/10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw/edit)
+2. Add rows with Status = `Draft`
+3. When ready, change Status to `Ready`
+4. GitHub Actions syncs to Typefully every 15 minutes
+5. Review/approve in Typefully, then it publishes
 
-## Posting Schedule
-- **X**: 1-3x daily (hot takes, breaking news)
-- **Mastodon**: 1x daily (cross-post from X)
-- **Threads**: 1x daily (longer form) - when connected
-- **Instagram**: 3-5x/week (visuals) - when connected
+### Sheet Columns
+| Platform | Content | Media URL | Date | Time | Status | Notes |
+|----------|---------|-----------|------|------|--------|-------|
+| X | Tweet text... | | 2026-02-15 | 09:00 | Ready | |
 
-## Race Weekend Ramp-Up
-- Thursday: Preview posts
-- Friday: FP1/FP2 reactions
-- Saturday: Quali predictions + reactions
-- Sunday: Race predictions + live commentary + post-race
+### Status Values
+- `Draft` — Not ready (ignored by sync)
+- `Ready` — Will be sent to Buffer on next sync
+- `Sent` — Already in Buffer (set automatically)
 
-## News Sources
-- formula1.com
-- motorsport.com
-- autosport.com
-- The Race
-- r/formula1
-- Key X accounts (F1, teams, journalists)
+## Connected Channels
+- ✅ X/Twitter: @NextGP_app
+- ✅ Mastodon: @nextGP@mastodon.xyz
+- ⏳ Threads: @nextgp_app (pending)
+- ⏳ Instagram: @nextgp_app (pending)
+
+## Files
+
+```
+nextgp-social/
+├── scripts/
+│   ├── sync-to-typefully.js  # Main sync script
+│   └── add-content.sh        # CLI to add posts via webhook
+├── content/                   # Content batches
+├── archive/                   # Old/unused code
+├── PROJECT.md                # Detailed project docs
+└── TASKS.md                  # Todo list
+```
+
+## Setup (One-Time)
+
+See [PROJECT.md](PROJECT.md) for full setup instructions including:
+- Google Service Account creation
+- Buffer API token
+- GitHub Actions secrets
