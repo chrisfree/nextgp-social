@@ -230,12 +230,18 @@ async function sync() {
       continue;
     }
 
+    // Normalize time format (6:00 → 06:00)
+    let normalizedTime = time;
+    if (time && time.match(/^\d:\d\d$/)) {
+      normalizedTime = '0' + time; // 6:00 → 06:00
+    }
+    
     // Create scheduled timestamp (ISO 8601)
-    const scheduledAt = `${date}T${time}:00Z`;
+    const scheduledAt = `${date}T${normalizedTime}:00Z`;
     const scheduledDate = new Date(scheduledAt);
     
     if (isNaN(scheduledDate.getTime())) {
-      console.log(`⚠️  Row ${i + 1}: Invalid date/time "${scheduledAt}", skipping`);
+      console.log(`⚠️  Row ${i + 1}: Invalid date/time "${scheduledAt}" (original: ${date} ${time}), skipping`);
       skipped++;
       continue;
     }
