@@ -236,15 +236,27 @@ async function sync() {
       normalizedTime = '0' + time; // 6:00 → 06:00
     }
     
-    // Create scheduled timestamp (ISO 8601)
-    const scheduledAt = `${date}T${normalizedTime}:00Z`;
-    const scheduledDate = new Date(scheduledAt);
+    // Parse as Chicago time and convert to UTC
+    // Sheet times are in America/Chicago (Central Time)
+    const chicagoDateStr = `${date}T${normalizedTime}:00`;
+    
+    // Create date in Chicago timezone, then convert to ISO string (UTC)
+    const chicagoDate = new Date(chicagoDateStr + '-06:00'); // CST is UTC-6
+    
+    // Handle CDT (Daylight Saving) - March to November
+    const month = parseInt(date.split('-')[1], 10);
+    const isDST = month >= 3 && month <= 11; // Rough DST check
+    const utcOffset = isDST ? '-05:00' : '-06:00';
+    const scheduledDate = new Date(chicagoDateStr + utcOffset);
     
     if (isNaN(scheduledDate.getTime())) {
-      console.log(`⚠️  Row ${i + 1}: Invalid date/time "${scheduledAt}" (original: ${date} ${time}), skipping`);
+      console.log(`⚠️  Row ${i + 1}: Invalid date/time "${date} ${time}", skipping`);
       skipped++;
       continue;
     }
+    
+    // Convert to ISO 8601 UTC
+    const scheduledAt = scheduledDate.toISOString();
 
     // Check for duplicate
     const hash = hashPost(content, scheduledAt);

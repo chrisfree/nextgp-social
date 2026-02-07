@@ -28,7 +28,9 @@ GitHub Actions (every 15 min)
 ### Sheet Columns
 | Platform | Content | Media URL | Date | Time | Status | Notes |
 |----------|---------|-----------|------|------|--------|-------|
-| X | Tweet text... | | 2026-02-15 | 09:00 | Ready | |
+| X | Tweet text... | | 2026-02-15 | 9:00 | Ready | |
+
+⏰ **Times are Chicago time (Central)** — no conversion needed!
 
 ### Status Values
 - `Draft` — Not ready (ignored by sync)
