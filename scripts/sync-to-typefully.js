@@ -16,8 +16,8 @@ const crypto = require('crypto');
 
 // Configuration
 const CONFIG = {
-  sheetRange: 'A:G', // Columns: Platform, Content, Media URL, Date, Time, Status, Notes
-  statusColumn: 5,   // F column (0-indexed = 5)
+  sheetRange: 'A:F', // Columns: Platform, Content, Date, Time, Status, Notes
+  statusColumn: 4,   // E column (0-indexed = 4)
   sentHashesFile: path.join(__dirname, 'sent-hashes.json'),
   defaultSheetId: '10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw',
 };
@@ -83,6 +83,11 @@ class TypefullyAPI {
       };
     } else if (platform.toLowerCase() === 'threads') {
       platforms.threads = {
+        enabled: true,
+        posts: [{ text }]
+      };
+    } else if (platform.toLowerCase() === 'bluesky') {
+      platforms.bluesky = {
         enabled: true,
         posts: [{ text }]
       };
@@ -214,7 +219,7 @@ async function sync() {
     const row = rows[i];
     if (!row || row.length < 6) continue;
 
-    const [platform, content, mediaUrl, date, time, status] = row;
+    const [platform, content, date, time, status] = row;
 
     // Only process "Ready" status
     if (status?.toLowerCase() !== 'ready') {
