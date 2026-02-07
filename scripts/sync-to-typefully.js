@@ -235,22 +235,61 @@ async function sync() {
       continue;
     }
 
-    // Normalize time format (6:00 → 06:00)
-    let normalizedTime = time;
-    if (time && time.match(/^\d:\d\d$/)) {
-      normalizedTime = '0' + time; // 6:00 → 06:00
+    // Parse flexible date formats (2/15/2026, 2026-02-15, etc.)
+    let parsedDate;
+    const dateStr = date.toString().trim();
+    
+    // Try M/D/YYYY format first (e.g., 2/15/2026)
+    const mdyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (mdyMatch) {
+      const [, month, day, year] = mdyMatch;
+      parsedDate = { year: parseInt(year), month: parseInt(month), day: parseInt(day) };
+    } else {
+      // Try YYYY-MM-DD format
+      const isoMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (isoMatch) {
+        const [, year, month, day] = isoMatch;
+        parsedDate = { year: parseInt(year), month: parseInt(month), day: parseInt(day) };
+      }
     }
     
-    // Parse as Chicago time and convert to UTC
-    // Sheet times are in America/Chicago (Central Time)
-    const chicagoDateStr = `${date}T${normalizedTime}:00`;
+    if (!parsedDate) {
+      console.log(`⚠️  Row ${i + 1}: Can't parse date "${date}", skipping`);
+      skipped++;
+      continue;
+    }
     
-    // Create date in Chicago timezone, then convert to ISO string (UTC)
-    const chicagoDate = new Date(chicagoDateStr + '-06:00'); // CST is UTC-6
+    // Parse flexible time formats (2:00:00 PM, 14:00, 2:00 PM, etc.)
+    let hours = 0, minutes = 0;
+    const timeStr = time.toString().trim();
     
-    // Handle CDT (Daylight Saving) - March to November
-    const month = parseInt(date.split('-')[1], 10);
-    const isDST = month >= 3 && month <= 11; // Rough DST check
+    // Try 12-hour format with AM/PM (e.g., 2:00:00 PM, 2:00 PM)
+    const time12Match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+    if (time12Match) {
+      hours = parseInt(time12Match[1]);
+      minutes = parseInt(time12Match[2]);
+      const isPM = time12Match[3].toUpperCase() === 'PM';
+      if (isPM && hours !== 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+    } else {
+      // Try 24-hour format (e.g., 14:00, 9:00)
+      const time24Match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+      if (time24Match) {
+        hours = parseInt(time24Match[1]);
+        minutes = parseInt(time24Match[2]);
+      } else {
+        console.log(`⚠️  Row ${i + 1}: Can't parse time "${time}", skipping`);
+        skipped++;
+        continue;
+      }
+    }
+    
+    // Build date string for Chicago timezone
+    const pad = (n) => n.toString().padStart(2, '0');
+    const chicagoDateStr = `${parsedDate.year}-${pad(parsedDate.month)}-${pad(parsedDate.day)}T${pad(hours)}:${pad(minutes)}:00`;
+    
+    // Handle CDT (Daylight Saving) - rough check: March to November
+    const isDST = parsedDate.month >= 3 && parsedDate.month <= 11;
     const utcOffset = isDST ? '-05:00' : '-06:00';
     const scheduledDate = new Date(chicagoDateStr + utcOffset);
     
