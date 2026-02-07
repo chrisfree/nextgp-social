@@ -1,6 +1,13 @@
 # Credentials - don't commit secrets
 credentials/
 
+# Node
+node_modules/
+package-lock.json
+
+# Sync state (stored as GitHub artifact)
+scripts/sent-hashes.json
+
 # OS files
 .DS_Store
 

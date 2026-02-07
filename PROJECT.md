@@ -1,173 +1,108 @@
-# NextGP Social Media Automation
-
-Automated content pipeline for growing NextGP's social presence.
+# NextGP Social — Project Details
 
 ## Overview
 
-**Goal:** Grow downloads for NextGP (F1 iOS app) through consistent social media presence without requiring daily manual effort.
+**Goal:** Grow NextGP downloads through consistent social presence without daily manual effort.
 
-**Owner:** Chris Free
+**Owner:** Chris Free  
 **Assistant:** K2 (Clawdbot)
 
 ## Architecture
 
 ```
-┌─────────────┐     webhook      ┌──────────────┐
+┌─────────────┐                  ┌──────────────┐
 │     K2      │ ───────────────> │ Google Sheet │
-│ (generates) │                  │  (content)   │
+│ (generates) │    (webhook)     │  (content)   │
 └─────────────┘                  └──────┬───────┘
                                         │
                               Status = "Ready"
                                         │
                                         ▼
-                                 ┌─────────────┐
-                                 │   Make.com  │
-                                 │  (watches)  │
-                                 └──────┬──────┘
-                                        │
-                                        ▼
+                              ┌──────────────────┐
+                              │  GitHub Actions  │
+                              │  (every 15 min)  │
+                              │                  │
+                              │  Hash-based      │
+                              │  deduplication   │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
                                  ┌─────────────┐
                                  │   Buffer    │
                                  │  (queue)    │
                                  └──────┬──────┘
                                         │
-                              Chris reviews/approves
-                                        │
                                         ▼
                               ┌─────────────────┐
-                              │ X / Mastodon /  │
-                              │ Threads / Insta │
+                              │ X / Mastodon    │
                               └─────────────────┘
 ```
 
-## Accounts & Credentials
+## Setup
 
-| Service | Email | Credentials Location |
-|---------|-------|---------------------|
-| Make.com | chrisfree@icloud.com | `credentials/make-com.txt` |
-| Buffer | chrisfree@icloud.com | 1Password |
-| Google Sheet | - | [Link](https://docs.google.com/spreadsheets/d/10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw/edit) |
+### 1. Google Service Account
 
-## API Endpoints
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create project → Enable Google Sheets API
+3. Create Service Account → Download JSON key
+4. Share the [Google Sheet](https://docs.google.com/spreadsheets/d/10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw) with the service account email
 
-### Make.com Webhook (Add Row to Sheet)
-```bash
-curl -X POST "https://hook.us2.make.com/w1ur8kwy4bnl2hgbwdg39mr6j04446at" \
-  -H "Content-Type: application/json" \
-  -H "x-make-apikey: nextgp-2026-k2so-webhook" \
-  -d '{
-    "platform": "X",
-    "content": "Your post content here #F1",
-    "media": "",
-    "date": "2026-02-10",
-    "time": "09:00",
-    "status": "Draft",
-    "notes": "Optional notes"
-  }'
-```
+### 2. Buffer Token
 
-## Google Sheet Columns
+1. Go to [Buffer Developers](https://buffer.com/developers/apps)
+2. Create app → Get Access Token
 
-| Column | Field | Description |
-|--------|-------|-------------|
-| A | Platform | X, Mastodon, Threads, Instagram |
-| B | Content | Post text (with hashtags, emojis) |
-| C | Media URL | Optional image/video URL |
-| D | Scheduled Date | YYYY-MM-DD format |
-| E | Scheduled Time | HH:MM format (24h) |
-| F | Status | Draft → Ready → Sent |
-| G | Notes | Internal notes (not posted) |
+### 3. GitHub Secrets
 
-## Workflow
+Go to: Settings → Secrets and variables → Actions
 
-### Adding Content (K2)
-1. Generate content batch based on F1 news, race calendar, content pillars
-2. POST to Make.com webhook with `status: "Draft"`
-3. Content appears in Google Sheet
+| Secret | Value |
+|--------|-------|
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | Entire JSON key file contents |
+| `BUFFER_ACCESS_TOKEN` | Your Buffer token |
 
-### Approving Content (Chris)
-1. Review posts in Google Sheet
-2. Edit content as needed
-3. Change Status to `Ready` for approved posts
-4. Make.com automatically sends to Buffer
+### 4. Add the GitHub Actions Workflow
 
-### Publishing (Buffer)
-1. Posts appear in Buffer queue at scheduled time
-2. Final review/edit in Buffer app
-3. Buffer publishes automatically or manually
+Create `.github/workflows/sync.yml` with the contents from `WORKFLOW.yml` in this repo.
+
+(Can't push workflow files via API — must be done manually or via GitHub UI)
 
 ## Content Strategy
 
-### Pillars
 | Pillar | % | Examples |
 |--------|---|----------|
-| Race Weekend | 35% | Quali reactions, predictions, analysis |
-| Breaking News | 25% | Driver news, regulations, team drama |
-| App Value | 20% | NextGP features, widgets, tips |
+| Race Weekend | 35% | Quali reactions, predictions |
+| Breaking News | 25% | Driver news, team drama |
+| App Value | 20% | Features, tips, widgets |
 | F1 Culture | 15% | Memes, hot takes, history |
 | Engagement | 5% | Polls, questions |
 
-### Posting Frequency
+## Posting Schedule
+
 - **X**: 1-3x daily
 - **Mastodon**: 1x daily
-- **Threads**: 1x daily (when connected)
-- **Instagram**: 3-5x/week (when connected)
 
-### Race Weekend Ramp-Up
-- Thursday: Preview posts
-- Friday: FP1/FP2 reactions
-- Saturday: Quali predictions + reactions
-- Sunday: Race predictions + live commentary + post-race
+## Adding Content
 
-## Social Profiles
+### Option 1: Direct to Sheet
+Open sheet, add row, set Status = `Draft` or `Ready`
 
-| Platform | Handle | Status |
-|----------|--------|--------|
-| X (Twitter) | @NextGP_app | ✅ Connected |
-| Mastodon | @nextGP@mastodon.xyz | ✅ Connected |
-| Threads | @nextgp_app | ⏳ Pending |
-| Instagram | @nextgp_app | ⏳ Pending |
-
-## Make.com Scenarios
-
-### 1. Add Content to Sheet
-- **Trigger:** Webhook
-- **Action:** Google Sheets - Add Row
-- **Status:** ✅ Active
-
-### 2. Sheet to Buffer
-- **Trigger:** Google Sheets - Watch Rows (filter: Status = Ready)
-- **Action:** Buffer - Create Post
-- **Status:** ✅ Active
-
-## Files in This Project
-
-```
-nextgp-social/
-├── PROJECT.md          # This file
-├── TASKS.md            # Ongoing tasks and improvements
-├── README.md           # Quick reference
-├── credentials/
-│   ├── make-com.txt    # Make.com login
-│   └── make-webhook.txt # Webhook details
-├── content/
-│   ├── ready-to-post.md
-│   └── batch-001-2026-01-31.md
-├── scripts/
-│   └── add-content.sh  # Quick script to add posts
-└── assets/             # Images, graphics
-```
-
-## Quick Commands
-
-### Add a single post
+### Option 2: Webhook (for K2)
 ```bash
-./scripts/add-content.sh "X" "Your post here #F1" "2026-02-10" "09:00"
+./scripts/add-content.sh "X" "Your tweet #F1" "2026-02-15" "09:00"
 ```
 
-### Check sheet status
-Open: https://docs.google.com/spreadsheets/d/10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw/edit
+## Duplicate Prevention
 
----
+The sync script creates an MD5 hash of `content + scheduled_time`. Hashes are stored as a GitHub artifact. Even if the sync runs multiple times, the same post will **never** be sent twice.
 
-*Last updated: 2026-02-01*
+## Troubleshooting
+
+**Posts not syncing?**
+- Check Status is exactly `Ready`
+- Check GitHub Actions logs
+- Verify secrets are set
+
+**Wrong Buffer profile?**
+- Script auto-detects profiles by platform name
+- Check Buffer has the platform connected

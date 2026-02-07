@@ -1,0 +1,19 @@
+{
+  "name": "nextgp-social",
+  "version": "2.0.0",
+  "description": "Automated content pipeline for NextGP F1 app social media",
+  "main": "scripts/sync-to-buffer.js",
+  "scripts": {
+    "sync": "node scripts/sync-to-buffer.js",
+    "test": "echo \"No tests yet\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrisfree/nextgp-social.git"
+  },
+  "author": "Chris Free",
+  "license": "MIT",
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}
