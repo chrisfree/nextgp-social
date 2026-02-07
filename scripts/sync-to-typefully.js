@@ -16,7 +16,7 @@ const crypto = require('crypto');
 
 // Configuration
 const CONFIG = {
-  sheetRange: 'A:F', // Columns: Platform, Content, Date, Time, Status, Notes
+  sheetRange: 'A:G', // Columns: Platform, Content, Date, Time, Status, Notes, Source
   statusColumn: 4,   // E column (0-indexed = 4)
   sentHashesFile: path.join(__dirname, 'sent-hashes.json'),
   defaultSheetId: '10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw',
