@@ -11,9 +11,9 @@ Google Sheet (source of truth)
         ↓
 GitHub Actions (every 15 min)
         ↓
-   Buffer (queue)
+   Typefully (schedule)
         ↓
-   X / Mastodon
+   X / Mastodon / LinkedIn / Threads
 ```
 
 ## Quick Start
@@ -22,8 +22,8 @@ GitHub Actions (every 15 min)
 1. Open the [Google Sheet](https://docs.google.com/spreadsheets/d/10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw/edit)
 2. Add rows with Status = `Draft`
 3. When ready, change Status to `Ready`
-4. GitHub Actions syncs to Buffer every 15 minutes
-5. Review/approve in Buffer, then it publishes
+4. GitHub Actions syncs to Typefully every 15 minutes
+5. Review/approve in Typefully, then it publishes
 
 ### Sheet Columns
 | Platform | Content | Media URL | Date | Time | Status | Notes |
@@ -46,12 +46,12 @@ GitHub Actions (every 15 min)
 ```
 nextgp-social/
 ├── scripts/
-│   ├── sync-to-buffer.js   # Main sync script
-│   └── add-content.sh      # CLI to add posts via webhook
-├── content/                 # Content batches
-├── archive/                 # Old/unused code
-├── PROJECT.md              # Detailed project docs
-└── TASKS.md                # Todo list
+│   ├── sync-to-typefully.js  # Main sync script
+│   └── add-content.sh        # CLI to add posts via webhook
+├── content/                   # Content batches
+├── archive/                   # Old/unused code
+├── PROJECT.md                # Detailed project docs
+└── TASKS.md                  # Todo list
 ```
 
 ## Setup (One-Time)

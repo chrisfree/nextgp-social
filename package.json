@@ -2,9 +2,9 @@
   "name": "nextgp-social",
   "version": "2.0.0",
   "description": "Automated content pipeline for NextGP F1 app social media",
-  "main": "scripts/sync-to-buffer.js",
+  "main": "scripts/sync-to-typefully.js",
   "scripts": {
-    "sync": "node scripts/sync-to-buffer.js",
+    "sync": "node scripts/sync-to-typefully.js",
     "test": "echo \"No tests yet\""
   },
   "repository": {

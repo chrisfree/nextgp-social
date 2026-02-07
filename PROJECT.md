@@ -28,13 +28,14 @@
                                        │
                                        ▼
                                  ┌─────────────┐
-                                 │   Buffer    │
-                                 │  (queue)    │
+                                 │  Typefully  │
+                                 │  (schedule) │
                                  └──────┬──────┘
                                         │
                                         ▼
                               ┌─────────────────┐
-                              │ X / Mastodon    │
+                              │ X / Mastodon /  │
+                              │ LinkedIn/Threads│
                               └─────────────────┘
 ```
 
@@ -47,10 +48,11 @@
 3. Create Service Account → Download JSON key
 4. Share the [Google Sheet](https://docs.google.com/spreadsheets/d/10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw) with the service account email
 
-### 2. Buffer Token
+### 2. Typefully API Key
 
-1. Go to [Buffer Developers](https://buffer.com/developers/apps)
-2. Create app → Get Access Token
+1. Go to [Typefully Settings](https://typefully.com/settings)
+2. Scroll to "API" section
+3. Create an API key
 
 ### 3. GitHub Secrets
 
@@ -59,7 +61,7 @@ Go to: Settings → Secrets and variables → Actions
 | Secret | Value |
 |--------|-------|
 | `GOOGLE_SERVICE_ACCOUNT_KEY` | Entire JSON key file contents |
-| `BUFFER_ACCESS_TOKEN` | Your Buffer token |
+| `TYPEFULLY_API_KEY` | Your Typefully API key |
 
 ### 4. Add the GitHub Actions Workflow
 

@@ -1,16 +1,12 @@
 /**
- * Buffer Sync Script
+ * Typefully Sync Script
  * 
- * Reads posts from Google Sheets, sends to Buffer API, prevents duplicates.
- * 
- * Usage:
- *   node sync-to-buffer.js
+ * Reads posts from Google Sheets, sends to Typefully API, prevents duplicates.
  * 
  * Required environment variables:
  *   GOOGLE_SERVICE_ACCOUNT_KEY - JSON string of service account credentials
- *   GOOGLE_SHEET_ID - The spreadsheet ID from the URL
- *   BUFFER_ACCESS_TOKEN - Your Buffer access token
- *   BUFFER_PROFILE_IDS - Comma-separated Buffer profile IDs (optional, fetches if not set)
+ *   TYPEFULLY_API_KEY - Your Typefully API key
+ *   GOOGLE_SHEET_ID - (optional) defaults to NextGP sheet
  */
 
 const { google } = require('googleapis');
@@ -23,49 +19,87 @@ const CONFIG = {
   sheetRange: 'A:G', // Columns: Platform, Content, Media URL, Date, Time, Status, Notes
   statusColumn: 5,   // F column (0-indexed = 5)
   sentHashesFile: path.join(__dirname, 'sent-hashes.json'),
-  // Default sheet ID (can be overridden by env var)
   defaultSheetId: '10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw',
 };
 
-// Buffer API helper
-class BufferAPI {
-  constructor(accessToken) {
-    this.accessToken = accessToken;
-    this.baseUrl = 'https://api.bufferapp.com/1';
+// Typefully API helper
+class TypefullyAPI {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.baseUrl = 'https://api.typefully.com';
+    this.socialSetId = null;
   }
 
-  async getProfiles() {
-    const response = await fetch(`${this.baseUrl}/profiles.json?access_token=${this.accessToken}`);
-    if (!response.ok) throw new Error(`Buffer API error: ${response.status}`);
-    return response.json();
-  }
-
-  async createUpdate(profileIds, text, scheduledAt, mediaUrl = null) {
-    const params = new URLSearchParams();
-    params.append('access_token', this.accessToken);
-    params.append('text', text);
-    params.append('scheduled_at', scheduledAt);
-    
-    // Add each profile ID
-    profileIds.forEach(id => params.append('profile_ids[]', id));
-    
-    // Add media if provided
-    if (mediaUrl) {
-      params.append('media[link]', mediaUrl);
+  async request(method, endpoint, body = null) {
+    const options = {
+      method,
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    };
+    if (body) {
+      options.body = JSON.stringify(body);
     }
 
-    const response = await fetch(`${this.baseUrl}/updates/create.json`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString()
-    });
-
+    const response = await fetch(`${this.baseUrl}${endpoint}`, options);
+    
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Buffer create error: ${response.status} - ${error}`);
+      throw new Error(`Typefully API error ${response.status}: ${error}`);
+    }
+
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return null;
     }
 
     return response.json();
+  }
+
+  async getSocialSets() {
+    const result = await this.request('GET', '/v2/social-sets');
+    return result.results || [];
+  }
+
+  async createDraft(socialSetId, text, scheduledAt, platform = 'x') {
+    // Build platform config
+    const platforms = {};
+    
+    if (platform.toLowerCase() === 'x' || platform.toLowerCase() === 'twitter') {
+      platforms.x = {
+        enabled: true,
+        posts: [{ text }]
+      };
+    } else if (platform.toLowerCase() === 'mastodon') {
+      platforms.mastodon = {
+        enabled: true,
+        posts: [{ text }]
+      };
+    } else if (platform.toLowerCase() === 'linkedin') {
+      platforms.linkedin = {
+        enabled: true,
+        posts: [{ text }]
+      };
+    } else if (platform.toLowerCase() === 'threads') {
+      platforms.threads = {
+        enabled: true,
+        posts: [{ text }]
+      };
+    } else {
+      // Default to X
+      platforms.x = {
+        enabled: true,
+        posts: [{ text }]
+      };
+    }
+
+    const body = {
+      platforms,
+      publish_at: scheduledAt, // ISO 8601 string
+    };
+
+    return this.request('POST', `/v2/social-sets/${socialSetId}/drafts`, body);
   }
 }
 
@@ -90,8 +124,8 @@ class SheetsAPI {
 
   async updateCell(row, column, value) {
     const sheets = google.sheets({ version: 'v4', auth: await this.auth.getClient() });
-    const columnLetter = String.fromCharCode(65 + column); // A=0, B=1, etc.
-    const range = `${columnLetter}${row + 1}`; // +1 for 1-indexed
+    const columnLetter = String.fromCharCode(65 + column);
+    const range = `${columnLetter}${row + 1}`;
     
     await sheets.spreadsheets.values.update({
       spreadsheetId: this.sheetId,
@@ -123,53 +157,43 @@ function hashPost(content, scheduledTime) {
   return crypto.createHash('md5').update(`${content}|${scheduledTime}`).digest('hex');
 }
 
-// Platform mapping to Buffer profile service names
-const PLATFORM_MAP = {
-  'x': 'twitter',
-  'twitter': 'twitter',
-  'mastodon': 'mastodon',
-  'instagram': 'instagram',
-  'threads': 'threads',
-  'facebook': 'facebook',
-  'linkedin': 'linkedin',
-};
-
 // Main sync function
 async function sync() {
-  console.log('🔄 Starting Buffer sync...\n');
+  console.log('🔄 Starting Typefully sync...\n');
 
   // Load environment variables
   const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   const sheetId = process.env.GOOGLE_SHEET_ID || CONFIG.defaultSheetId;
-  const bufferToken = process.env.BUFFER_ACCESS_TOKEN;
-  const manualProfileIds = process.env.BUFFER_PROFILE_IDS?.split(',').filter(Boolean);
+  const typefullyKey = process.env.TYPEFULLY_API_KEY;
 
-  if (!serviceAccountKey || !bufferToken) {
+  if (!serviceAccountKey || !typefullyKey) {
     console.error('❌ Missing required environment variables:');
     if (!serviceAccountKey) console.error('   - GOOGLE_SERVICE_ACCOUNT_KEY');
-    if (!bufferToken) console.error('   - BUFFER_ACCESS_TOKEN');
+    if (!typefullyKey) console.error('   - TYPEFULLY_API_KEY');
     console.error('\nOptional (has default):');
     console.error(`   - GOOGLE_SHEET_ID (using: ${sheetId})`);
     process.exit(1);
   }
-  
+
   console.log(`📄 Sheet ID: ${sheetId}`);
 
   // Initialize APIs
   const credentials = JSON.parse(serviceAccountKey);
   const sheets = new SheetsAPI(credentials, sheetId);
-  const buffer = new BufferAPI(bufferToken);
+  const typefully = new TypefullyAPI(typefullyKey);
 
-  // Get Buffer profiles
-  console.log('📡 Fetching Buffer profiles...');
-  const profiles = await buffer.getProfiles();
-  const profileMap = {};
-  profiles.forEach(p => {
-    const service = p.service.toLowerCase();
-    if (!profileMap[service]) profileMap[service] = [];
-    profileMap[service].push(p.id);
-  });
-  console.log(`   Found profiles: ${Object.keys(profileMap).join(', ')}\n`);
+  // Get Typefully social sets (accounts)
+  console.log('📡 Fetching Typefully accounts...');
+  const socialSets = await typefully.getSocialSets();
+  
+  if (socialSets.length === 0) {
+    console.error('❌ No Typefully social sets found. Connect an account in Typefully first.');
+    process.exit(1);
+  }
+
+  // Use the first social set (usually the primary account)
+  const primarySet = socialSets[0];
+  console.log(`   Using account: @${primarySet.username} (ID: ${primarySet.id})\n`);
 
   // Load sent hashes
   const sentHashes = loadSentHashes();
@@ -186,7 +210,7 @@ async function sync() {
   let skipped = 0;
   let duplicates = 0;
 
-  for (let i = 1; i < rows.length; i++) { // Skip header row
+  for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.length < 6) continue;
 
@@ -206,8 +230,8 @@ async function sync() {
       continue;
     }
 
-    // Create scheduled timestamp
-    const scheduledAt = `${date}T${time}:00`;
+    // Create scheduled timestamp (ISO 8601)
+    const scheduledAt = `${date}T${time}:00Z`;
     const scheduledDate = new Date(scheduledAt);
     
     if (isNaN(scheduledDate.getTime())) {
@@ -219,31 +243,21 @@ async function sync() {
     // Check for duplicate
     const hash = hashPost(content, scheduledAt);
     if (sentHashes.has(hash)) {
-      console.log(`🔁 Row ${i + 1}: Duplicate detected, marking as Queued`);
+      console.log(`🔁 Row ${i + 1}: Duplicate detected, marking as Sent`);
       await sheets.updateCell(i, CONFIG.statusColumn, 'Sent');
       duplicates++;
       continue;
     }
 
-    // Get profile IDs for this platform
-    const platformKey = PLATFORM_MAP[platform.toLowerCase()] || platform.toLowerCase();
-    const profileIds = manualProfileIds || profileMap[platformKey];
-
-    if (!profileIds || profileIds.length === 0) {
-      console.log(`⚠️  Row ${i + 1}: No Buffer profile found for "${platform}", skipping`);
-      skipped++;
-      continue;
-    }
-
-    // Send to Buffer
+    // Send to Typefully
     try {
       console.log(`📤 Row ${i + 1}: Sending "${content.substring(0, 50)}..." to ${platform}`);
       
-      await buffer.createUpdate(
-        profileIds,
+      await typefully.createDraft(
+        primarySet.id,
         content,
-        Math.floor(scheduledDate.getTime() / 1000), // Unix timestamp
-        mediaUrl || null
+        scheduledAt,
+        platform
       );
 
       // Mark as sent
@@ -251,7 +265,7 @@ async function sync() {
       await sheets.updateCell(i, CONFIG.statusColumn, 'Sent');
       sent++;
       
-      console.log(`   ✅ Sent and marked as Queued`);
+      console.log(`   ✅ Scheduled and marked as Sent`);
     } catch (error) {
       console.error(`   ❌ Failed to send: ${error.message}`);
       skipped++;
