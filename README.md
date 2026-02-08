@@ -14,17 +14,17 @@ Automated social media posting for [NextGP](https://nextgp.app) F1 content.
 │  │ (Claude) │─────▶│  Sheet   │◀────▶│ Actions  │             │
 │  └──────────┘      └──────────┘      └────┬─────┘             │
 │       │                  │                │                   │
-│       │ Breaking         │ Draft → Ready  │ Hourly sync       │
+│       │ Breaking         │  Draft → Ready │  (Hourly sync)    │
 │       │ News             │                │                   │
 │       ▼                  │                ▼                   │
-│  ┌──────────┐            │           ┌──────────┐             │
-│  │  Chris   │────────────┘           │ Typefully│             │
-│  │ (Review) │                        └────┬─────┘             │
+│  ┌──────────┐            │           ┌───────────┐            │
+│  │  Chris   │────────────┘           │ Typefully │            │
+│  │ (Review) │                        └────┬──────┘            │
 │  └──────────┘                             │                   │
-│                                           │ Auto-publish      │
+│                                           │  (Auto-publish)   │
 │                                           ▼                   │
 │                         ┌─────────────────────────────┐       │
-│                         │     Social Platforms        │       │
+│                         │       Social Platforms      │       │
 │                         │  ┌───┐ ┌───────┐ ┌───────┐  │       │
 │                         │  │ X │ │Threads│ │Mastodn│  │       │
 │                         │  └───┘ └───────┘ └───────┘  │       │
