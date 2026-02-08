@@ -1,0 +1,24 @@
+# GitHub Actions Workflow for Cleanup
+# 
+# SETUP: Copy this file to .github/workflows/cleanup.yml
+
+name: Cleanup Sent Posts
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: Run cleanup
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: npm run cleanup
