@@ -13,10 +13,10 @@ Automated social media posting for [NextGP](https://nextgp.app) F1 content.
 │  │    K2    │      │  Google  │      │  GitHub  │             │
 │  │ (Claude) │─────▶│  Sheet   │◀────▶│ Actions  │             │
 │  └──────────┘      └──────────┘      └────┬─────┘             │
-│       │                  │                 │                  │
-│       │ Breaking         │ Draft → Ready   │ Hourly sync      │
-│       │ News             │                 │                  │
-│       ▼                  │                 ▼                  │
+│       │                  │                │                   │
+│       │ Breaking         │ Draft → Ready  │ Hourly sync       │
+│       │ News             │                │                   │
+│       ▼                  │                ▼                   │
 │  ┌──────────┐            │           ┌──────────┐             │
 │  │  Chris   │────────────┘           │ Typefully│             │
 │  │ (Review) │                        └────┬─────┘             │
