@@ -1,64 +1,110 @@
-# NextGP Social
+# NextGP Social Automation
 
-Automated social media pipeline for the NextGP F1 app.
+Automated social media posting for [NextGP](https://nextgp.app) F1 content.
 
 ## How It Works
 
 ```
-Google Sheet (source of truth)
-        ↓
-   Status = "Ready"
-        ↓
-GitHub Actions (every 15 min)
-        ↓
-   Typefully (schedule)
-        ↓
-   X / Mastodon / LinkedIn / Threads
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           CONTENT WORKFLOW                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   ┌──────────┐      ┌──────────────┐      ┌───────────┐                │
+│   │   K2     │      │    Google    │      │  GitHub   │                │
+│   │ (Claude) │─────▶│    Sheet     │◀────▶│  Actions  │                │
+│   └──────────┘      └──────────────┘      └─────┬─────┘                │
+│        │                   │                     │                       │
+│        │ Breaking          │ Draft → Ready       │ Hourly sync           │
+│        │ News              │                     │                       │
+│        ▼                   │                     ▼                       │
+│   ┌──────────┐             │              ┌───────────┐                 │
+│   │  Chris   │─────────────┘              │ Typefully │                 │
+│   │ (Review) │                            └─────┬─────┘                 │
+│   └──────────┘                                  │                       │
+│                                                 │ Auto-publish           │
+│                                                 ▼                       │
+│                              ┌─────────────────────────────────┐        │
+│                              │      Social Platforms           │        │
+│                              │  ┌───┐ ┌────────┐ ┌────────┐   │        │
+│                              │  │ X │ │Threads │ │Mastodon│   │        │
+│                              │  └───┘ └────────┘ └────────┘   │        │
+│                              │         ┌────────┐              │        │
+│                              │         │BlueSky │              │        │
+│                              │         └────────┘              │        │
+│                              └─────────────────────────────────┘        │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Quick Start
+## Sheet Format
 
-### Adding Content
-1. Open the [Google Sheet](https://docs.google.com/spreadsheets/d/10tvPIjibY1Xm-SoxDYo3Je6oa29zNcRYmJoPgThcpqw/edit)
-2. Add rows with Status = `Draft`
-3. When ready, change Status to `Ready`
-4. GitHub Actions syncs to Typefully every 15 minutes
-5. Review/approve in Typefully, then it publishes
+| Platform | Content | Scheduled Date | Scheduled Time | Status | Notes | Source |
+|----------|---------|----------------|----------------|--------|-------|--------|
+| X | Post text... | 2/15/2026 | 2:00 PM | Draft | Optional notes | https://source-url |
 
-### Sheet Columns
-| Platform | Content | Media URL | Date | Time | Status | Notes |
-|----------|---------|-----------|------|------|--------|-------|
-| X | Tweet text... | | 2026-02-15 | 9:00 | Ready | |
-
-⏰ **Times are Chicago time (Central)** — no conversion needed!
+### Platform Options
+- `X` — Posts to X/Twitter only
+- `Threads` — Posts to Threads only
+- `Mastodon` — Posts to Mastodon only
+- `Bluesky` — Posts to BlueSky only
+- `All` — Posts to all 4 platforms at once
 
 ### Status Values
-- `Draft` — Not ready (ignored by sync)
-- `Ready` — Will be sent to Buffer on next sync
-- `Sent` — Already in Buffer (set automatically)
+- `Draft` — Being reviewed, won't sync
+- `Ready` — Will be synced to Typefully on next run
+- `Sent` — Already pushed to Typefully (auto-archived every 6 hours)
 
-## Connected Channels
-- ✅ X/Twitter: @NextGP_app
-- ✅ Mastodon: @nextGP@mastodon.xyz
-- ⏳ Threads: @nextgp_app (pending)
-- ⏳ Instagram: @nextgp_app (pending)
+### Time Format
+- Dates: `2/15/2026` or `2026-02-15`
+- Times: `2:00 PM` or `14:00`
+- **Timezone: Chicago (America/Chicago)** — auto-converts to UTC
 
-## Files
+## GitHub Actions
 
+### Sync (Hourly)
+`.github/workflows/sync.yml`
+- Runs every hour
+- Picks up "Ready" rows → pushes to Typefully → marks as "Sent"
+
+### Cleanup (Every 6 hours)
+`.github/workflows/cleanup.yml`
+- Moves "Sent" rows to Archive tab
+- Keeps main sheet clean
+
+## Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run sync manually
+npm run sync
+
+# Run cleanup manually
+npm run cleanup
 ```
-nextgp-social/
-├── scripts/
-│   ├── sync-to-typefully.js  # Main sync script
-│   └── add-content.sh        # CLI to add posts via webhook
-├── content/                   # Content batches
-├── archive/                   # Old/unused code
-├── PROJECT.md                # Detailed project docs
-└── TASKS.md                  # Todo list
-```
 
-## Setup (One-Time)
+## Required Secrets
 
-See [PROJECT.md](PROJECT.md) for full setup instructions including:
-- Google Service Account creation
-- Buffer API token
-- GitHub Actions secrets
+Set in GitHub repo → Settings → Secrets:
+
+| Secret | Description |
+|--------|-------------|
+| `TYPEFULLY_API_KEY` | Typefully API key |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | Google service account JSON |
+
+## Reference Data
+
+- `reference/2026-grid.md` — Verified 2026 F1 driver grid
+- Data source: [Jolpica F1 API](https://api.jolpi.ca/ergast/f1/)
+
+## Content Sources
+
+K2 monitors these for news:
+- Motorsport.com RSS
+- Reddit r/formula1
+- Jolpica API (for results)
+
+---
+
+Built with 🏎️ for NextGP
