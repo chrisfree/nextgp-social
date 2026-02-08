@@ -5,6 +5,7 @@
   "main": "scripts/sync-to-typefully.js",
   "scripts": {
     "sync": "node scripts/sync-to-typefully.js",
+    "cleanup": "node scripts/cleanup-sent.js",
     "test": "echo \"No tests yet\""
   },
   "repository": {

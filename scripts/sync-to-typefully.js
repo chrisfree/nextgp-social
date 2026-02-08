@@ -65,38 +65,29 @@ class TypefullyAPI {
   async createDraft(socialSetId, text, scheduledAt, platform = 'x') {
     // Build platform config
     const platforms = {};
+    const post = { text };
     
-    if (platform.toLowerCase() === 'x' || platform.toLowerCase() === 'twitter') {
-      platforms.x = {
-        enabled: true,
-        posts: [{ text }]
-      };
-    } else if (platform.toLowerCase() === 'mastodon') {
-      platforms.mastodon = {
-        enabled: true,
-        posts: [{ text }]
-      };
-    } else if (platform.toLowerCase() === 'linkedin') {
-      platforms.linkedin = {
-        enabled: true,
-        posts: [{ text }]
-      };
-    } else if (platform.toLowerCase() === 'threads') {
-      platforms.threads = {
-        enabled: true,
-        posts: [{ text }]
-      };
-    } else if (platform.toLowerCase() === 'bluesky') {
-      platforms.bluesky = {
-        enabled: true,
-        posts: [{ text }]
-      };
+    const platformLower = platform.toLowerCase();
+    
+    if (platformLower === 'all') {
+      // Post to ALL platforms
+      platforms.x = { enabled: true, posts: [post] };
+      platforms.threads = { enabled: true, posts: [post] };
+      platforms.mastodon = { enabled: true, posts: [post] };
+      platforms.bluesky = { enabled: true, posts: [post] };
+    } else if (platformLower === 'x' || platformLower === 'twitter') {
+      platforms.x = { enabled: true, posts: [post] };
+    } else if (platformLower === 'mastodon') {
+      platforms.mastodon = { enabled: true, posts: [post] };
+    } else if (platformLower === 'linkedin') {
+      platforms.linkedin = { enabled: true, posts: [post] };
+    } else if (platformLower === 'threads') {
+      platforms.threads = { enabled: true, posts: [post] };
+    } else if (platformLower === 'bluesky') {
+      platforms.bluesky = { enabled: true, posts: [post] };
     } else {
       // Default to X
-      platforms.x = {
-        enabled: true,
-        posts: [{ text }]
-      };
+      platforms.x = { enabled: true, posts: [post] };
     }
 
     const body = {
