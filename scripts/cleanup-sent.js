@@ -1,8 +1,11 @@
 /**
- * Cleanup Script — Archives sent posts
+ * Cleanup Script — Archives old posts
  * 
- * Moves rows with Status="Sent" to an "Archive" tab
- * Run via cron every 6 hours
+ * Moves rows to "Archive" tab if:
+ *   - Status is "Sent" or "Skip"
+ *   - Scheduled date has passed (regardless of status)
+ * 
+ * Run nightly via cron
  */
 
 const { google } = require('googleapis');
@@ -77,32 +80,58 @@ async function cleanup() {
   const header = rows[0];
   const dataRows = rows.slice(1);
 
-  // Find sent rows
-  const sentRows = [];
+  // Parse a date string (M/D/YYYY or YYYY-MM-DD) into a Date object (midnight Chicago)
+  function parseDate(dateStr) {
+    if (!dateStr) return null;
+    const s = dateStr.toString().trim();
+    let m, d, y;
+    const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (mdy) { [, m, d, y] = mdy.map(Number); }
+    else {
+      const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (iso) { [, y, m, d] = iso.map(Number); }
+      else return null;
+    }
+    return new Date(y, m - 1, d); // local date
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Find rows to archive: Sent, Skip, or scheduled date in the past
+  const archiveRows = [];
   const keepRows = [header];
   
-  dataRows.forEach((row, idx) => {
+  dataRows.forEach((row) => {
+    if (!row[0] && !row[1]) { return; } // skip empty rows entirely
     const status = (row[CONFIG.statusColumn] || '').toLowerCase();
-    if (status === 'sent') {
-      sentRows.push(row);
+    const scheduledDate = parseDate(row[2]); // column C = date
+    
+    const shouldArchive = 
+      status === 'sent' || 
+      status === 'skip' || 
+      (scheduledDate && scheduledDate < today);
+    
+    if (shouldArchive) {
+      archiveRows.push(row);
     } else {
       keepRows.push(row);
     }
   });
 
-  if (sentRows.length === 0) {
-    console.log('✅ No sent posts to archive');
+  if (archiveRows.length === 0) {
+    console.log('✅ Nothing to archive');
     return;
   }
 
-  console.log(`📦 Archiving ${sentRows.length} sent posts...`);
+  console.log(`📦 Archiving ${archiveRows.length} posts (sent/skip/past-date)...`);
 
-  // Append sent rows to Archive
+  // Append rows to Archive
   await sheets.spreadsheets.values.append({
     spreadsheetId: CONFIG.sheetId,
     range: `${CONFIG.archiveSheet}!A:G`,
     valueInputOption: 'RAW',
-    requestBody: { values: sentRows }
+    requestBody: { values: archiveRows }
   });
 
   // Clear main sheet and rewrite without sent rows
@@ -118,7 +147,7 @@ async function cleanup() {
     requestBody: { values: keepRows }
   });
 
-  console.log(`✅ Archived ${sentRows.length} posts, ${keepRows.length - 1} remaining`);
+  console.log(`✅ Archived ${archiveRows.length} posts, ${keepRows.length - 1} remaining`);
 }
 
 cleanup().catch(err => {
