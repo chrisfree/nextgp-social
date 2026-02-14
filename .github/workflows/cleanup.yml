@@ -6,7 +6,7 @@ name: Cleanup Sent Posts
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+    - cron: '0 12 * * *'  # Daily at 6 AM Chicago (UTC-6)
   workflow_dispatch:
 
 jobs:
